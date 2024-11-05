@@ -1,61 +1,107 @@
-## Overview
-This script automates the process of running an Nmap vulnerability scan on a target IP address. It obtains open ports and potential vulnerabilities on a system by using Nmap’s built-in scripts, making it a valuable tool for network audits and vulnerability assessments. The script also allows users to save the scan report in a text file.
+# Autoscan
 
-## Key Features
-- Automates vulnerability scanning on specified target IP
-- Utilizes Nmap’s ‘-sV’ option to detect service versions and ‘–script vuln’ to check for known vulnerabilities
-- Allows users to save results into a file with time-stamped information
+This script simplifies the process of running Nmap scans on multiple targets with various options. 
+
+## Features
+
+Multiple Targets Support: Scan multiple IP addresses, ranges, or hostnames simultaneously.
+
+Customizable Scans: Choose from different scan types or specify custom Nmap options.
+
+Port Specification: Define specific ports or port ranges to scan.
+
+OS Detection: Enable OS detection during scans.
+Output Formats: Select different output formats for your scan results.
+
+Logging: Keeps a log of all scan activities and errors.
+
+Concurrent Scanning: Utilizes multithreading to perform scans faster.
+
+## Prerequisites
+
+Python 3.x
+
+Nmap Installed: Make sure Nmap is installed and accessible in your system's PATH.
 
 ## Installation
 
-### System Requirements
-- Python 3.9+ installed on your machine
-- Nmap installed and added to the system PATH
+Clone the Repository:
 
-### Steps:
-1. Clone repository:
+```
+git clone https://github.com/yourusername/nmap-scanner-tool.git
+```
 
-    '''git clone https://github.com/szachbagley/Security-Tools.git'''
+Navigate to the Directory:
 
-2. Navigate to directory:
+```
+cd nmap-scanner-tool
+```
 
-    '''cd Security-Tools/autoscan/'''
+## Usage
 
+```
+python nmap_scanner.py [options] target1 target2 ...
+```
 
-3. Run script using python:
-   
-    '''Without Saving Text File: py autoscan.py <target_ip>'''
-   
-    '''With Saving Text File: py autoscan.py <target_ip> [--save]'''
+### Positional Arguments
 
-## Save Results to File
-Use –save flag to save the results to a text file:
+```targets```: One or more target IP addresses, ranges, or hostnames.
 
-'''py autoscan.py 192.168.1.1 --save'''
+### Optional Arguments
 
-## Example Usage
-Run Nmap vulnerability scan on single IP address and save results as text file:
+```--save```: Save the output to a text file.
 
-'''py autoscan.py 192.168.1.1 --save'''
- 
-## Example Output
-Running Nmap Vulnerability scan on 192.168.1.1
-Successful Scan! 
+```--scan-type```: Type of scan to perform (vulnerability, tcp_syn, aggressive, ping). Default is vulnerability.
 
-Scan Results: 
+```--ports```: Specify ports to scan (e.g., "1-1000", "80,443").
 
-Starting Nmap 7.91 ( https://nmap.org ) at 2024-09-30 12:41 UTC 
+```--os-detection```: Enable OS detection.
 
-Nmap scan report for 192.168.1.1 
+```--additional-options```: Additional Nmap command-line options enclosed in quotes.
 
-Host is up (0.013s latency).
+```--output-format```: Output format:
 
-PORT STATE SERVICE VERSION
+- ```N```: Normal
 
-22/tcp open     ssh            OpenSSH 7.6p1 Ubuntu 4ubuntu0.7 (Ubuntu Linux; protocol 2.0) | vulners: 
+- ```X```: XML
 
-| CVE-2018-15473: 5.0 MEDIUM 
+- ```G```: Grepable
 
-|_ CVE-2020-15778: 7.8 HIGH 
+- ```S```: Script kiddie
 
-Nmap done: 1 IP address (1 host up) scanned in 12.45 seconds
+- ```A```: All
+
+## Examples
+Basic Vulnerability Scan
+
+```
+python nmap_scanner.py 192.168.1.1
+```
+
+TCP SYN Scan on Multiple Targets
+
+```
+python nmap_scanner.py 192.168.1.1 192.168.1.2 --scan-type tcp_syn
+```
+
+Aggressive Scan with OS Detection
+
+```
+python nmap_scanner.py example.com --scan-type aggressive --os-detection
+```
+
+Specify Ports and Save Output
+
+```
+python nmap_scanner.py 192.168.1.0/24 --ports 1-1000 --save
+```
+
+Using Additional Nmap Options
+
+```
+python nmap_scanner.py target.com --additional-options "-Pn --traceroute"
+```
+
+## Logs
+
+All scan activities and errors are logged in nmap_scanner.log.

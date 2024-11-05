@@ -1,77 +1,111 @@
-# test comment for github
-# import necessary packages for processing, parsing, and date
 import subprocess
 import argparse
 from datetime import datetime
+import threading
+import logging
+import shutil
+import sys
 
-# run scan
-def run_nmap_vuln_scan(target_ip):
+# Configure logging
+logging.basicConfig(filename='nmap_scanner.log', level=logging.INFO,
+                    format='%(asctime)s:%(levelname)s:%(message)s')
+
+
+def is_nmap_installed():
+    if shutil.which('nmap') is None:
+        print("Error: Nmap is not installed. Please install Nmap to use this tool.")
+        sys.exit(1)
+
+
+def run_nmap_scan(target, scan_type, options):
     try:
-        
-        # print text showing can is running on target
-        print(f"Running Nmap Vulnerability scan on {target_ip}")
-        
-        # get commands to run nmap, get version numbers, and find vulnerabilies by using scripts
-        nmap_commands = ['nmap', '-sV', '--script', 'vuln', target_ip]
-        
-        # get results from scan, including output and error messages
-        results = subprocess.run(nmap_commands, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text = True)
-        
-        # return results if successful
+        print(f"Running Nmap {scan_type} scan on {target}")
+
+        nmap_commands = ['nmap'] + options + [target]
+
+        results = subprocess.run(nmap_commands, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
         if results.returncode == 0:
-            print("Sucessful Scan!\n")
+            print(f"Scan on {target} completed successfully!\n")
+            logging.info(f"Scan on {target} completed successfully.")
             return results.stdout
-        
-        # error message if unsuccessful
         else:
-            print(f"Error: {results.stderr}")
+            print(f"Error scanning {target}: {results.stderr}")
+            logging.error(f"Error scanning {target}: {results.stderr}")
             return None
-        
-    # create exception if scan cannot start
+
     except Exception as e:
-        print(f"Error: {str(e)}")
+        print(f"Exception occurred while scanning {target}: {str(e)}")
+        logging.error(f"Exception occurred while scanning {target}: {str(e)}")
         return None
-    
-# save report
-def save_report(target_ip, report):
-    
-    # get current date and time
-    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    # create a report header with date and time
-    report_header = f"Nmap Vulnerability Scan Report\nTarget: {target_ip}\nDate: {current_time}\n\n"
-    
-    # save the scan result to a text file
-    filename = f"nmap_vuln_scan_{target_ip}.txt"
+
+
+def save_report(target, report, scan_type):
+    current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"nmap_{scan_type}_scan_{target}_{current_time}.txt"
     with open(filename, 'w') as file:
-        file.write(report_header + report)
-    
+        file.write(report)
     print(f"Report saved as {filename}")
-   
-# main process to run functions    
+
+
+def scan_target(target, args):
+    scan_options = []
+    scan_type = args.scan_type
+
+    if scan_type == 'vulnerability':
+        scan_options.extend(['-sV', '--script', 'vuln'])
+    elif scan_type == 'tcp_syn':
+        scan_options.append('-sS')
+    elif scan_type == 'aggressive':
+        scan_options.append('-A')
+    elif scan_type == 'ping':
+        scan_options.append('-sn')
+
+    if args.ports:
+        scan_options.extend(['-p', args.ports])
+
+    if args.os_detection:
+        scan_options.append('-O')
+
+    if args.additional_options:
+        scan_options.extend(args.additional_options.split())
+
+    if args.output_format:
+        scan_options.extend(['-o' + args.output_format, f"{scan_type}_scan_{target}"])
+
+    scan_result = run_nmap_scan(target, scan_type, scan_options)
+
+    if scan_result and args.save:
+        save_report(target, scan_result, scan_type)
+
+
 def main():
-    
-    # set up argument parsing for the script
-    parser = argparse.ArgumentParser(description='Automated Nmap Vulnerability Scanner')
-    
-    # add target
-    parser.add_argument('target_ip', help='Target IP address or range')
-    
-    # save file
+    is_nmap_installed()
+
+    parser = argparse.ArgumentParser(description='Automated Nmap Scanner')
+
+    parser.add_argument('targets', nargs='+', help='Target IP addresses, ranges, or hostnames')
     parser.add_argument('--save', action='store_true', help='Save the output to a text file')
+    parser.add_argument('--scan-type', choices=['vulnerability', 'tcp_syn', 'aggressive', 'ping'],
+                        default='vulnerability', help='Type of scan to perform')
+    parser.add_argument('--ports', help='Specify ports to scan (e.g., "1-1000", "80,443")')
+    parser.add_argument('--os-detection', action='store_true', help='Enable OS detection')
+    parser.add_argument('--additional-options', help='Additional Nmap command-line options')
+    parser.add_argument('--output-format', choices=['N', 'X', 'G', 'S', 'A'],
+                        help='Output format: N (normal), X (XML), G (grepable), S (script kiddie), A (all)')
 
     args = parser.parse_args()
 
-    # run the nmap scan
-    scan_result = run_nmap_vuln_scan(args.target_ip)
+    threads = []
 
-    if scan_result:
-        print("\nScan Results:\n")
-        print(scan_result)
+    for target in args.targets:
+        thread = threading.Thread(target=scan_target, args=(target, args))
+        threads.append(thread)
+        thread.start()
 
-        # save the report if prompted
-        if args.save:
-            save_report(args.target_ip, scan_result)
+    for thread in threads:
+        thread.join()
+
 
 if __name__ == "__main__":
-    main()    
+    main()
